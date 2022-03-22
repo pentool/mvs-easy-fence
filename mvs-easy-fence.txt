@@ -1,0 +1,120 @@
+// xs_begin
+// arg : { name = 'Orientation' value = '0'  range = '0 3'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Count' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Size' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Spacing' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Count' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Size' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Spacing' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Inset' value = '0'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Color' value = '88'  range = '1 255'  step = '1'  decimal = '0' }
+// xs_end
+
+int _orientation = int(i_args[0]);
+
+// Post parameters.
+float _postCount = i_args[1];
+float _postSize = i_args[2];
+float _postSpacing = i_args[3];
+float _postOffset = i_args[4];
+
+// Rail parameters.
+float _railCount = i_args[5];
+float _railSize = i_args[6];
+float _railSpacing = i_args[7];
+float _railOffset = i_args[8];
+float _railInset = i_args[9];
+float _railColor = i_args[10];
+
+ivec3 getOrientation() {
+	if (_orientation == 0 || _orientation == 2)
+		return ivec3(0, 2, 1);
+	else if (_orientation == 1 || _orientation == 3)
+		return ivec3(1, 2, 0);
+}
+
+float createFence(vec3 v) {
+	float postSectionSize = 0.0;
+	float railSectionSize = 0.0;
+	float startPos = 0.0;
+	float endPos = 0.0;
+	bool bUseX = false;
+	bool bUseY = false;
+
+	ivec3 orientation = getOrientation();
+
+	int a1 = orientation[0];
+	int a2 = orientation[2];
+	int a3 = orientation[1];
+
+	// Calculate post section size.
+	// Section size is measured from the center of model space.
+	if (_postCount == 1.0) {
+		postSectionSize = _postSize / 2.0;
+	}
+	else if (_postCount > 1.0) {
+		postSectionSize = ceil((_postCount * _postSize + (_postCount - 1.0) * _postSpacing) / 2.0);
+	}
+
+	// Calculate start and end offsets from the center of model space.
+	startPos = ceil(i_volume_size[a1] / 2.0) - postSectionSize + _postOffset;
+	endPos = ceil(i_volume_size[a1] / 2.0) + postSectionSize + _postOffset;
+	
+	// Check if voxels on X axis will be displayed.
+	if ((v[a1] >= startPos) && (v[a1] <= endPos)) {
+		if (mod(v[a1] - startPos, _postSize + _postSpacing) < _postSize) {
+			bUseX = true;
+		}
+	}
+
+	// Calculate rail section size.
+	// Section size is measured from the center of model space.
+	if (_railCount == 1.0) {
+		railSectionSize = _railSize / 2.0;
+	}
+	else if (_railCount > 1.0) {
+		railSectionSize = ceil((_railCount * _railSize + (_railCount - 1.0) * _railSpacing) / 2.0);
+	}
+
+	// Calculate start and end offsets from the center of model space.
+	startPos = ceil(i_volume_size[a3] / 2.0) - railSectionSize + _railOffset;
+	endPos = ceil(i_volume_size[a3] / 2.0) + railSectionSize + _railOffset;
+
+	// Limit rail inset value to size of posts (aka model cage).
+	_railInset = _railInset * 2.0 < i_volume_size[a2] ? _railInset : (i_volume_size[a2] - 2.0) / 2.0;
+
+	// Check if voxels on X axis will be displayed.
+	// Also take into account the inset value.
+	if ((v[a3] >= startPos) && (v[a3] <= endPos)) {
+		if ((mod(v[a3] - startPos, _railSize + _railSpacing) < _railSize) && ((v[a2] > _railInset) && (v[a2] < i_volume_size[a2] - _railInset))) {
+			bUseY = true;
+		}
+	}
+
+	if (bUseX) {
+		return i_color_index;
+	}
+	else if (bUseY) {
+		return _railColor;
+	}
+	else {
+		return 0.0;
+	}
+}
+
+float map(vec3 v) {
+	// Set orientation based on which 3D pane is selected for drawing.
+	if (_orientation == 0) {
+		v.y = i_volume_size.y - v.y;
+	}
+	else if (_orientation == 1) {
+		v.xy = vec2(v.x, i_volume_size.y - v.y);
+	}
+	else if (_orientation == 3) {
+		v.x = i_volume_size.x - v.x;
+	}
+
+	return createFence(v);
+}
