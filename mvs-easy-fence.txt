@@ -1,14 +1,16 @@
 // xs_begin
 // arg : { name = 'Orientation' value = '0'  range = '0 3'  step = '1'  decimal = '0' }
-// arg : { name = 'Post Count' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Post Size' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Post Spacing' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Count' value = '3'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Size' value = '5'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Spacing' value = '5'  range = '1 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Post Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Rail Count' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Rail Size' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Rail Spacing' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Cap Height' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Cap Inset' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Count' value = '2'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Size' value = '2'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Spacing' value = '5'  range = '1 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Rail Inset' value = '0'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Inset' value = '2'  range = '0 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Color' value = '88'  range = '1 255'  step = '1'  decimal = '0' }
 // xs_end
 
@@ -20,13 +22,17 @@ float _postSize = i_args[2];
 float _postSpacing = i_args[3];
 float _postOffset = i_args[4];
 
+// Post cap parameters.
+float _capHeight = i_args[5] - 1.0;
+float _capInset = i_args[6];
+
 // Rail parameters.
-float _railCount = i_args[5];
-float _railSize = i_args[6];
-float _railSpacing = i_args[7];
-float _railOffset = i_args[8];
-float _railInset = i_args[9];
-float _railColor = i_args[10];
+float _railCount = i_args[7];
+float _railSize = i_args[8];
+float _railSpacing = i_args[9];
+float _railOffset = i_args[10];
+float _railInset = i_args[11];
+float _railColor = i_args[12];
 
 ivec3 getOrientation() {
 	if (_orientation == 0 || _orientation == 2)
@@ -49,8 +55,30 @@ float createFence(vec3 v) {
 	int a2 = orientation[2];
 	int a3 = orientation[1];
 
+	// Limit cap inset.
+	float insetLimit = min(_postSize, i_volume_size[a2]);
+	if (mod(insetLimit, 2.0) == 0.0) {
+		_capInset = min(_capInset, insetLimit / 2.0 - 1.0);
+	}
+	else {
+		_capInset = min(_capInset, floor(insetLimit / 2.0));
+	}
+
+	// Limit cap height.
+	float heightLimit = floor((i_volume_size[a3] - 2.0) / 2.0);
+	if (mod(i_volume_size[a3] - 2.0, 2.0) == 0.0) {
+		_capHeight = min(_capHeight, heightLimit - 1.0);
+	}
+	else {
+		_capHeight = min(_capHeight, heightLimit);
+	}
+
+	// ============================================
+	// ========== CALCULATIONS FOR POSTS ==========
+	// ============================================
+
 	// Calculate post section size.
-	// Section size is measured from the center of model space.
+	// Section size is measured from the center of model cage.
 	if (_postCount == 1.0) {
 		postSectionSize = _postSize / 2.0;
 	}
@@ -58,19 +86,38 @@ float createFence(vec3 v) {
 		postSectionSize = ceil((_postCount * _postSize + (_postCount - 1.0) * _postSpacing) / 2.0);
 	}
 
-	// Calculate start and end offsets from the center of model space.
+	// Calculate start and end offsets from the center of model cage for X axis.
 	startPos = ceil(i_volume_size[a1] / 2.0) - postSectionSize + _postOffset;
 	endPos = ceil(i_volume_size[a1] / 2.0) + postSectionSize + _postOffset;
-	
-	// Check if voxels on X axis will be displayed.
+			
+	// We have to be within the X axis section limits.
 	if ((v[a1] >= startPos) && (v[a1] <= endPos)) {
+
+		// We have to be within the X axis limits of the post.
 		if (mod(v[a1] - startPos, _postSize + _postSpacing) < _postSize) {
 			bUseX = true;
+
+			if (floor(v[a3]) > _capHeight && floor(v[a3]) < i_volume_size[a3] - 1.0 - _capHeight) {
+				float xRatio = mod(v[a1] - startPos, _postSize + _postSpacing);
+				
+				
+				// if (v[a1] - startPos >= _capInset && v[a1] - startPos < _postSize - _capInset && v[a2] >= _capInset && v[a2] < i_volume_size[a2] - _capInset) {
+				if (xRatio >= _capInset && xRatio < _postSize - _capInset && v[a2] >= _capInset && v[a2] < i_volume_size[a2] - _capInset) {
+					return i_color_index;
+				}
+				else {
+					bUseX = false;
+				}
+			}
 		}
 	}
 
+	// ============================================
+	// ========== CALCULATIONS FOR RAILS ==========
+	// ============================================
+
 	// Calculate rail section size.
-	// Section size is measured from the center of model space.
+	// Section size is measured from the center of model cage.
 	if (_railCount == 1.0) {
 		railSectionSize = _railSize / 2.0;
 	}
@@ -78,15 +125,15 @@ float createFence(vec3 v) {
 		railSectionSize = ceil((_railCount * _railSize + (_railCount - 1.0) * _railSpacing) / 2.0);
 	}
 
-	// Calculate start and end offsets from the center of model space.
+	// Calculate start and end offsets from the center of model cage for Z axis.
 	startPos = ceil(i_volume_size[a3] / 2.0) - railSectionSize + _railOffset;
 	endPos = ceil(i_volume_size[a3] / 2.0) + railSectionSize + _railOffset;
 
 	// Limit rail inset value to size of posts (aka model cage).
 	_railInset = _railInset * 2.0 < i_volume_size[a2] ? _railInset : (i_volume_size[a2] - 2.0) / 2.0;
 
-	// Check if voxels on X axis will be displayed.
-	// Also take into account the inset value.
+	// Check if voxels on Y axis will be displayed.
+	// Also take into account the rail inset value.
 	if ((v[a3] >= startPos) && (v[a3] <= endPos)) {
 		if ((mod(v[a3] - startPos, _railSize + _railSpacing) < _railSize) && ((v[a2] > _railInset) && (v[a2] < i_volume_size[a2] - _railInset))) {
 			bUseY = true;
