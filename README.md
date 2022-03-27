@@ -25,6 +25,14 @@ Spacing between each post.
 **Post Offset:** [-255 - 255]  
 Offset/move the posts left or right by this amount.
 
+**Cap Height:** [1 - 255]  
+New in v1.1  
+Adjust the post cap height. This will only have a visible effect if the *'Cap Inset'* parameter has a value greater than 1. See example images at the bottom.
+
+**Cap Inset:** [0 - 255]  
+New in v1.1  
+Adjust the cap inset value. Cap inset adds a cap at the top and bottom of the post. When this value is zero (0), you get the simple rectangular post and the 'Cap Height' parameter will have no visible effect. See example images at the bottom.
+
 **Rail Count:** [0 - 255]  
 The number of rails to use.
 
@@ -49,3 +57,10 @@ Allows you to specify a separate color for the rails. You can see the color inde
 
 ## Examples
 <img src="images/01.jpg" width="200"><img src="images/02.jpg" width="200"><img src="images/03.jpg" width="200"><img src="images/04.jpg" width="200"><img src="images/05.jpg" width="200"><img src="images/06.jpg" width="200"><img src="images/07.jpg" width="200">
+
+## Examples for v1.1 Cap Height and Cap Inset values.
+<img src="images/08.jpg" width="200"><img src="images/09.jpg" width="200"><img src="images/10.jpg" width="200"><img src="images/11.jpg" width="200"><img src="images/12.jpg" width="200"><img src="images/13.jpg" width="200"><img src="images/14.jpg" width="200"><img src="images/15.jpg" width="200">
+
+## Version History
+Version 1.1 - March 27, 2022  
+Adds post cap. You can adjust the cap size and inset.
