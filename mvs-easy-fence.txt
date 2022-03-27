@@ -46,8 +46,6 @@ float createFence(vec3 v) {
 	float railSectionSize = 0.0;
 	float startPos = 0.0;
 	float endPos = 0.0;
-	bool bUseX = false;
-	bool bUseY = false;
 
 	ivec3 orientation = getOrientation();
 
@@ -95,19 +93,16 @@ float createFence(vec3 v) {
 
 		// We have to be within the X axis limits of the post.
 		if (mod(v[a1] - startPos, _postSize + _postSpacing) < _postSize) {
-			bUseX = true;
 
 			if (floor(v[a3]) > _capHeight && floor(v[a3]) < i_volume_size[a3] - 1.0 - _capHeight) {
 				float xRatio = mod(v[a1] - startPos, _postSize + _postSpacing);
 				
-				
-				// if (v[a1] - startPos >= _capInset && v[a1] - startPos < _postSize - _capInset && v[a2] >= _capInset && v[a2] < i_volume_size[a2] - _capInset) {
 				if (xRatio >= _capInset && xRatio < _postSize - _capInset && v[a2] >= _capInset && v[a2] < i_volume_size[a2] - _capInset) {
 					return i_color_index;
 				}
-				else {
-					bUseX = false;
-				}
+			}
+			else {
+				return i_color_index;
 			}
 		}
 	}
@@ -136,19 +131,11 @@ float createFence(vec3 v) {
 	// Also take into account the rail inset value.
 	if ((v[a3] >= startPos) && (v[a3] <= endPos)) {
 		if ((mod(v[a3] - startPos, _railSize + _railSpacing) < _railSize) && ((v[a2] > _railInset) && (v[a2] < i_volume_size[a2] - _railInset))) {
-			bUseY = true;
+			return _railColor;
 		}
 	}
 
-	if (bUseX) {
-		return i_color_index;
-	}
-	else if (bUseY) {
-		return _railColor;
-	}
-	else {
-		return 0.0;
-	}
+	return 0.0;
 }
 
 float map(vec3 v) {
