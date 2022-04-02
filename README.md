@@ -76,6 +76,12 @@ Even though the maximum value of this parameter is 255, the maximum value you ca
 **Rail Color:** [1 - 255]  
 Allows you to specify a separate color for the rails. You can see the color index value when you hover over a color in the palette. (The posts use the currently selected color in the palette. To change the color of the posts, select a different color from the palette.)
 
+**A note about orientation**  
+Normally, you'd draw out the model cage from left to right. This way you can 'size' the fence to make it longer or shorter by adjusting the right side of the cage. However, depending on whether you draw the cage on the X or Y pane, and from left-to-right or right-to-left, you may want to flip the direction of the fence. In that case enable the X or Y *'Mirror Mode'* switch under the Brush Panel. If you are drawing the fence on the X pane, use the X switch. For drawing it on the Y pane, enable the Y switch. This will flip the fence around so can adjust the width from the opposite side.
+
+<img src="images/mirror.png" height="200">
+
+
 ## Examples
 <img src="images/01.jpg" width="200"><img src="images/02.jpg" width="200"><img src="images/03.jpg" width="200"><img src="images/04.jpg" width="200"><img src="images/05.jpg" width="200"><img src="images/06.jpg" width="200"><img src="images/07.jpg" width="200">
 
