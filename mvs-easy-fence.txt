@@ -1,51 +1,60 @@
 // xs_begin
-// arg : { name = 'Orientation' value = '0'  range = '0 3'  step = '1'  decimal = '0' }
-// arg : { name = 'Post Count' value = '3'  range = '0 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Post Size' value = '5'  range = '1 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Post Spacing' value = '5'  range = '1 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Post Spacing' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Post Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Cap Height' value = '1'  range = '1 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Cap Inset' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Picket Count' value = '4'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Picket Size' value = '2'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Picket Height Limit' value = '3'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Picket Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Picket Inset' value = '2'  range = '0 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Count' value = '2'  range = '0 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Size' value = '2'  range = '1 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Spacing' value = '5'  range = '1 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Offset' value = '0'  range = '-255 255'  step = '1'  decimal = '0' }
-// arg : { name = 'Rail Inset' value = '2'  range = '0 255'  step = '1'  decimal = '0' }
+// arg : { name = 'Rail Inset' value = '1'  range = '0 255'  step = '1'  decimal = '0' }
 // arg : { name = 'Rail Color' value = '88'  range = '1 255'  step = '1'  decimal = '0' }
 // xs_end
 
-int _orientation = int(i_args[0]);
 
 // Post parameters.
-float _postCount = i_args[1];
-float _postSize = i_args[2];
-float _postSpacing = i_args[3];
-float _postOffset = i_args[4];
+float _postSize = i_args[0];
+float _postSpacing = i_args[1];
+float _postOffset = i_args[2];
 
 // Post cap parameters.
-float _capHeight = i_args[5] - 1.0;
-float _capInset = i_args[6];
+float _capHeight = i_args[3] - 1.0;
+float _capInset = i_args[4];
+
+// Picket parameters.
+float _picketCount = i_args[5];
+float _picketSize = i_args[6];
+float _picketHeightLimit = i_args[7];
+float _picketOffset = i_args[8];
+float _picketInset = i_args[9];
 
 // Rail parameters.
-float _railCount = i_args[7];
-float _railSize = i_args[8];
-float _railSpacing = i_args[9];
-float _railOffset = i_args[10];
-float _railInset = i_args[11];
-float _railColor = i_args[12];
+float _railCount = i_args[10];
+float _railSize = i_args[11];
+float _railSpacing = i_args[12];
+float _railOffset = i_args[13];
+float _railInset = i_args[14];
+float _railColor = i_args[15];
+
 
 ivec3 getOrientation() {
-	if (_orientation == 0 || _orientation == 2)
+	if (i_volume_size.x >= i_volume_size.y) {
 		return ivec3(0, 2, 1);
-	else if (_orientation == 1 || _orientation == 3)
+	}
+	else if (i_volume_size.x < i_volume_size.y) {
 		return ivec3(1, 2, 0);
+	}
 }
 
 float createFence(vec3 v) {
-	float postSectionSize = 0.0;
-	float railSectionSize = 0.0;
-	float startPos = 0.0;
-	float endPos = 0.0;
+	float gridSize = 0.0;
+	float postRatio = 0.0;
 
 	ivec3 orientation = getOrientation();
 
@@ -53,85 +62,100 @@ float createFence(vec3 v) {
 	int a2 = orientation[2];
 	int a3 = orientation[1];
 
-	// Limit cap inset.
-	float insetLimit = min(_postSize, i_volume_size[a2]);
-	if (mod(insetLimit, 2.0) == 0.0) {
-		_capInset = min(_capInset, insetLimit / 2.0 - 1.0);
+	// If there are pickets, use them to determine distance between posts.
+	if (_picketCount > 0.0) {
+		gridSize = _postSize + _picketCount * _picketSize + (_picketCount + 1.0) * _postSpacing;
+		postRatio = mod(v[a1] - _postOffset, gridSize);
 	}
+	// If there are no pickets, use the post spacing values to determine spacing between posts.
 	else {
-		_capInset = min(_capInset, floor(insetLimit / 2.0));
+		gridSize = _postSize + _postSpacing;
+		postRatio = mod(v[a1] - _postOffset, gridSize);
 	}
 
-	// Limit cap height.
-	float heightLimit = floor((i_volume_size[a3] - 2.0) / 2.0);
-	if (mod(i_volume_size[a3] - 2.0, 2.0) == 0.0) {
-		_capHeight = min(_capHeight, heightLimit - 1.0);
-	}
-	else {
-		_capHeight = min(_capHeight, heightLimit);
-	}
+	// ===============================================
+	// ===== CALCULATIONS FOR POSTS ==================
+	// ===============================================
 
-	// ============================================
-	// ========== CALCULATIONS FOR POSTS ==========
-	// ============================================
+	// Draw posts.
+	if (postRatio < _postSize) {
 
-	// Calculate post section size.
-	// Section size is measured from the center of model cage.
-	if (_postCount == 1.0) {
-		postSectionSize = _postSize / 2.0;
-	}
-	else if (_postCount > 1.0) {
-		postSectionSize = ceil((_postCount * _postSize + (_postCount - 1.0) * _postSpacing) / 2.0);
-	}
+		// Limit cap inset.
+		float insetLimit = min(_postSize, i_volume_size[a2]);
+		if (mod(insetLimit, 2.0) == 0.0) {
+			_capInset = min(_capInset, insetLimit / 2.0 - 1.0);
+		}
+		else {
+			_capInset = min(_capInset, floor(insetLimit / 2.0));
+		}
 
-	// Calculate start and end offsets from the center of model cage for X axis.
-	startPos = ceil(i_volume_size[a1] / 2.0) - postSectionSize + _postOffset;
-	endPos = ceil(i_volume_size[a1] / 2.0) + postSectionSize + _postOffset;
-			
-	// We have to be within the X axis section limits.
-	if ((v[a1] >= startPos) && (v[a1] <= endPos)) {
+		// Limit cap height.
+		float heightLimit = floor((i_volume_size[a3] - 2.0) / 2.0);
+		if (mod(i_volume_size[a3] - 2.0, 2.0) == 0.0) {
+			_capHeight = min(_capHeight, heightLimit - 1.0);
+		}
+		else {
+			_capHeight = min(_capHeight, heightLimit);
+		}
 
-		// We have to be within the X axis limits of the post.
-		if (mod(v[a1] - startPos, _postSize + _postSpacing) < _postSize) {
-
-			if (floor(v[a3]) > _capHeight && floor(v[a3]) < i_volume_size[a3] - 1.0 - _capHeight) {
-				float xRatio = mod(v[a1] - startPos, _postSize + _postSpacing);
-				
-				if (xRatio >= _capInset && xRatio < _postSize - _capInset && v[a2] >= _capInset && v[a2] < i_volume_size[a2] - _capInset) {
-					return i_color_index;
-				}
-			}
-			else {
+		// Determine which voxels to draw.
+		if (floor(v[a3]) > _capHeight && floor(v[a3]) < i_volume_size[a3] - 1.0 - _capHeight) {
+			if (postRatio > _capInset && postRatio < _postSize - _capInset && v[a2] >= _capInset && v[a2] < i_volume_size[a2] - _capInset) {
 				return i_color_index;
 			}
 		}
+		else {
+			return i_color_index;
+		}
 	}
 
-	// ============================================
-	// ========== CALCULATIONS FOR RAILS ==========
-	// ============================================
+	// ===============================================
+	// ===== CALCULATIONS FOR PICKETS ================
+	// ===============================================
+
+	// Draw pickets.
+	if (postRatio >= _postSize) {
+		float picketRatio = mod(mod(v[a1] - _postOffset, gridSize) - _postSize, _postSpacing + _picketSize);
+
+		// Limit picket inset value so they won't disappear if inset value is too high.
+		_picketInset = _picketInset * 2.0 < i_volume_size[a2] ? _picketInset : (i_volume_size[a2] - 2.0) / 2.0;
+
+		if (picketRatio >= _postSpacing &&
+			v[a2] > _picketInset && v[a2] < i_volume_size[a2] - _picketInset &&
+			v[a3] - _picketOffset > _picketHeightLimit && v[a3] - _picketOffset < i_volume_size[a3] - _picketHeightLimit) {
+				return _railColor;
+		}
+	}
+
+	// ===============================================
+	// ===== CALCULATIONS FOR RAILS ==================
+	// ===============================================
 
 	// Calculate rail section size.
 	// Section size is measured from the center of model cage.
-	if (_railCount == 1.0) {
-		railSectionSize = _railSize / 2.0;
-	}
-	else if (_railCount > 1.0) {
-		railSectionSize = ceil((_railCount * _railSize + (_railCount - 1.0) * _railSpacing) / 2.0);
-	}
+	if (_railCount > 0.0) {
+		float railSectionSize = _railSize;
+		float startPos = 0.0;
+		float endPos = 0.0;
 
-	// Calculate start and end offsets from the center of model cage for Z axis.
-	startPos = ceil(i_volume_size[a3] / 2.0) - railSectionSize + _railOffset;
-	endPos = ceil(i_volume_size[a3] / 2.0) + railSectionSize + _railOffset;
+		if (_railCount > 1.0) {
+			railSectionSize = _railCount * _railSize + (_railCount - 1.0) * _railSpacing;
+		}
 
-	// Limit rail inset value to size of posts (aka model cage).
-	_railInset = _railInset * 2.0 < i_volume_size[a2] ? _railInset : (i_volume_size[a2] - 2.0) / 2.0;
+		// Calculate start and end offsets from the center of model cage for Z axis.
+		startPos = ceil((i_volume_size[a3] - railSectionSize) / 2.0) + _railOffset;
+		endPos = startPos + railSectionSize;
 
-	// Check if voxels on Y axis will be displayed.
-	// Also take into account the rail inset value.
-	if ((v[a3] >= startPos) && (v[a3] <= endPos)) {
-		if ((mod(v[a3] - startPos, _railSize + _railSpacing) < _railSize) && ((v[a2] > _railInset) && (v[a2] < i_volume_size[a2] - _railInset))) {
-			return _railColor;
+		// Limit rail inset value to size of posts (aka model cage).
+		_railInset = _railInset * 2.0 < i_volume_size[a2] ? _railInset : (i_volume_size[a2] - 2.0) / 2.0;
+
+		// Disaply rails taking into account the rail inset value.
+		if ((v[a3] >= startPos) && (v[a3] <= endPos)) {
+			if (mod(v[a3] - startPos, _railSize + _railSpacing) < _railSize &&
+				v[a2] > _railInset &&
+				v[a2] < i_volume_size[a2] - _railInset) {
+				return _railColor;
+			}
 		}
 	}
 
@@ -140,14 +164,15 @@ float createFence(vec3 v) {
 
 float map(vec3 v) {
 	// Set orientation based on which 3D pane is selected for drawing.
-	if (_orientation == 0) {
-		v.y = i_volume_size.y - v.y;
+	if (i_volume_size.x >= i_volume_size.y) {
+		if (i_mirror.x == 1.0) {
+			v.x = i_volume_size.x - v.x;
+		}
 	}
-	else if (_orientation == 1) {
-		v.xy = vec2(v.x, i_volume_size.y - v.y);
-	}
-	else if (_orientation == 3) {
-		v.x = i_volume_size.x - v.x;
+	else if (i_volume_size.x < i_volume_size.y) {
+		if (i_mirror.y == 1.0) {
+			v.y = i_volume_size.y - v.y;
+		}
 	}
 
 	return createFence(v);
