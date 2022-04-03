@@ -65,13 +65,13 @@ float createFence(vec3 v) {
 	// If there are pickets, use them to determine distance between posts.
 	if (_picketCount > 0.0) {
 		gridSize = _postSize + _picketCount * _picketSize + (_picketCount + 1.0) * _postSpacing;
-		postRatio = mod(v[a1] - _postOffset, gridSize);
 	}
 	// If there are no pickets, use the post spacing values to determine spacing between posts.
 	else {
 		gridSize = _postSize + _postSpacing;
-		postRatio = mod(v[a1] - _postOffset, gridSize);
 	}
+
+	postRatio = mod(v[a1] - _postOffset, gridSize);
 
 	// ===============================================
 	// ===== CALCULATIONS FOR POSTS ==================
